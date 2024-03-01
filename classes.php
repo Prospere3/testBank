@@ -102,6 +102,8 @@ class BankomatStatusOutput
             case Bankomat::STEP_NOT_VALID_OPTION:
                 echo "Invalid option selected " . PHP_EOL;
                 break;
+            case Bankomat::STEP_NOT_MONEY_ON_CARD:
+                echo "Not enough money for withdraw " . PHP_EOL;
         }
     }
 }
@@ -115,6 +117,8 @@ class Bankomat
     public const STEP_WITHDRAW = 6;
     public const STEP_DEPOSIT = 7;
     public const STEP_NOT_VALID_OPTION = 8;
+    public const STEP_NOT_MONEY_ON_CARD = 9;
+    public const STEP_NOT_MONEY_ON_BANKOMAT = 10;
     private BankomatStatusOutput $bankomatStatusOutput;
     private int $step = self::STEP_AWAIT_ENTER_CARD;
     public ?Card $card = null;
