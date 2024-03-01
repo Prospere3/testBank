@@ -148,9 +148,11 @@ class Bankomat
         $balance = $this->card->getBalance();
         return $balance;
     }
-    public function withdraw(): void
+    public function withdraw($amount): void
     {
         $this->changeStep(self::STEP_WITHDRAW);
+        $cardBalance = $this->card->getBalance();
+        $bankBalance = $this->balance;
     }
     public function deposit(int $amount): void
     {
