@@ -17,21 +17,35 @@ class User
     {
        $bankomat->takePin($pin);
     }
-    public function chooseOption()
+    public function chooseOption(Bankomat $bankomat): void
     {
-
+        $option = readline();
+        switch ($option) {
+            case 1:
+                $bankomat->checkBalance();
+                break;
+            case 2:
+                $bankomat->withdraw();
+                break;
+            case 3:
+                $bankomat->deposit(readline());
+                break;
+            default:
+                $bankomat->chooseNotValidOption();
+                break;
+        }
     }
 }
 class Card
 {
     private int $number;
     private int $pin;
-    private int $cardBalance;
-    public function __construct(int $number, int $pin, int $cardBalance)
+    private int $balance;
+    public function __construct(int $number, int $pin, int $balance)
     {
         $this->number = $number;
         $this->pin = $pin;
-        $this->cardBalance = $cardBalance;
+        $this->balance = $balance;
     }
     public function getNumber(): int
     {
@@ -41,10 +55,15 @@ class Card
     {
         return $this->pin;
     }
-    public function getCardBalance(): int
+    public function getBalance(): int
     {
-        return $this->cardBalance;
+        return $this->balance;
     }
+    public function setBalance(int $balance): void
+    {
+        $this->balance = $balance;
+    }
+
 }
 class BankomatStatusOutput
 {
@@ -63,25 +82,29 @@ class BankomatStatusOutput
                 echo "Enter your Pin-Code: " . PHP_EOL;
                 break;
             case Bankomat::STEP_VALID_PIN:
-                echo "Choose option: Check balance, Withdraw or Deposit money " . PHP_EOL;
+                echo "1. Check Balance" . PHP_EOL;
+                echo "2. Withdraw money" . PHP_EOL;
+                echo "3. Deposit money" . PHP_EOL;
+                echo "Choose your option number: " . PHP_EOL;
                 break;
             case Bankomat::STEP_NOT_VALID_PIN:
                 echo "Wrong pin code. Try again " . PHP_EOL;
                 break;
             case Bankomat::STEP_CHECK_BALANCE:
-                echo "Your balance is {$this->bankomat->checkBalance()}" . PHP_EOL;
+                echo "Your balance is: " . PHP_EOL;
                 break;
             case Bankomat::STEP_WITHDRAW:
                 echo "Enter the amount you want to withdraw " . PHP_EOL;
                 break;
             case Bankomat::STEP_DEPOSIT:
-                echo "You can put no more than 5,000 on the card at a time " . PHP_EOL;
+                echo "You can put your money " . PHP_EOL;
+                break;
+            case Bankomat::STEP_NOT_VALID_OPTION:
+                echo "Invalid option selected " . PHP_EOL;
                 break;
         }
     }
 }
-
-
 class Bankomat
 {
     public const STEP_AWAIT_ENTER_CARD = 1;
@@ -91,10 +114,11 @@ class Bankomat
     public const STEP_CHECK_BALANCE = 5;
     public const STEP_WITHDRAW = 6;
     public const STEP_DEPOSIT = 7;
+    public const STEP_NOT_VALID_OPTION = 8;
     private BankomatStatusOutput $bankomatStatusOutput;
     private int $step = self::STEP_AWAIT_ENTER_CARD;
     public ?Card $card = null;
-    private int $bankomatBalance = 5000;
+    private int $balance = 5000;
     public function __construct()
     {
         $this->bankomatStatusOutput = new BankomatStatusOutput();
@@ -116,19 +140,24 @@ class Bankomat
     public function changeStep(int $step): void
     {
         $this->step = $step;
-        $this->bankomatStatusOutput->output($this->step);
+        $this->bankomatStatusOutput->output($this->getStep());
     }
-    public function checkBalance()
+    public function checkBalance(): int
     {
-
+        $this->changeStep(self::STEP_CHECK_BALANCE);
+        $balance = $this->card->getBalance();
+        return $balance;
     }
-    public function withdraw()
+    public function withdraw(): void
     {
-
+        $this->changeStep(self::STEP_WITHDRAW);
     }
-    public function deposit()
+    public function deposit(int $amount): void
     {
-
+        $this->changeStep(self::STEP_DEPOSIT);
+        $currentBalance = $this->card->getBalance();
+        $newBalance = $currentBalance + $amount;
+        $this->card->setBalance($newBalance);
     }
     public function getStep(): int
     {
@@ -138,9 +167,9 @@ class Bankomat
     {
         $this->checkValidPin($pin);
     }
-    private function bankomatBalance()
+    public function chooseNotValidOption(): void
     {
-
+        $this->changeStep(self::STEP_NOT_VALID_OPTION);
     }
 }
 
