@@ -103,7 +103,13 @@ class BankomatStatusOutput
                 echo "Invalid option selected " . PHP_EOL;
                 break;
             case Bankomat::STEP_NOT_MONEY_ON_CARD:
-                echo "Not enough money for withdraw " . PHP_EOL;
+                echo "Not enough money on card for withdraw " . PHP_EOL;
+                break;
+            case Bankomat::STEP_NOT_MONEY_ON_BANKOMAT:
+                echo "Not enough money in bankomat for withdraw " . PHP_EOL;
+                break;
+            case Bankomat::STEP_VALID_WITHDRAW:
+                echo "Take your money {$this->bankomat->withdraw()}" . PHP_EOL;
         }
     }
 }
@@ -119,13 +125,15 @@ class Bankomat
     public const STEP_NOT_VALID_OPTION = 8;
     public const STEP_NOT_MONEY_ON_CARD = 9;
     public const STEP_NOT_MONEY_ON_BANKOMAT = 10;
+    public const STEP_VALID_WITHDRAW = 11;
     private BankomatStatusOutput $bankomatStatusOutput;
     private int $step = self::STEP_AWAIT_ENTER_CARD;
     public ?Card $card = null;
-    private int $balance = 5000;
-    public function __construct()
+    private int $balance;
+    public function __construct(int $balance)
     {
         $this->bankomatStatusOutput = new BankomatStatusOutput();
+        $this->balance = $balance;
     }
     public function takeCard(Card $card): self
     {
@@ -157,13 +165,27 @@ class Bankomat
         $this->changeStep(self::STEP_WITHDRAW);
         $cardBalance = $this->card->getBalance();
         $bankBalance = $this->balance;
+        if($amount > $cardBalance)
+            $this->changeStep(self::STEP_NOT_MONEY_ON_CARD);
+        elseif ($amount >$bankBalance)
+            $this->changeStep(self::STEP_NOT_MONEY_ON_BANKOMAT);
+        else
+            $newCardBalance = $cardBalance - $amount;
+            $newBankBalance = $bankBalance - $amount;
+            $this->card->setBalance($newCardBalance);
+            $this->setBalance($newBankBalance);
+            $this->changeStep(self::STEP_VALID_WITHDRAW);
+
     }
     public function deposit(int $amount): void
     {
         $this->changeStep(self::STEP_DEPOSIT);
-        $currentBalance = $this->card->getBalance();
-        $newBalance = $currentBalance + $amount;
-        $this->card->setBalance($newBalance);
+        $currentCardBalance = $this->card->getBalance();
+        $currentBankBalance = $this->balance;
+        $newCardBalance = $currentCardBalance + $amount;
+        $newBankBalance = $currentBankBalance + $amount;
+        $this->card->setBalance($newCardBalance);
+        $this->setBalance($newBankBalance);
     }
     public function getStep(): int
     {
@@ -176,6 +198,10 @@ class Bankomat
     public function chooseNotValidOption(): void
     {
         $this->changeStep(self::STEP_NOT_VALID_OPTION);
+    }
+    public function setBalance(int $balance): void
+    {
+        $this->balance = $balance;
     }
 }
 
