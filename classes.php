@@ -11,6 +11,7 @@ class User
     }
     public function insertCard(Bankomat $bankomat): void
     {
+
         $bankomat->takeCard($this->card);
     }
     public function enterPin(Bankomat $bankomat, int $pin): void
@@ -91,7 +92,7 @@ class BankomatStatusOutput
                 echo "Wrong pin code. Try again " . PHP_EOL;
                 break;
             case Bankomat::STEP_CHECK_BALANCE:
-                echo "Your balance is: " . PHP_EOL;
+                echo "Your balance is: {$this->bankomat->card->getBalance()} " . PHP_EOL;
                 break;
             case Bankomat::STEP_WITHDRAW:
                 echo "Enter the amount you want to withdraw " . PHP_EOL;
@@ -109,7 +110,7 @@ class BankomatStatusOutput
                 echo "Not enough money in bankomat for withdraw " . PHP_EOL;
                 break;
             case Bankomat::STEP_VALID_WITHDRAW:
-                echo "Take your money " . PHP_EOL;
+                echo "Take your money: " . PHP_EOL;
         }
     }
 }
@@ -132,7 +133,8 @@ class Bankomat
     private int $balance;
     public function __construct(int $balance)
     {
-        $this->bankomatStatusOutput = new BankomatStatusOutput();
+
+        $this->bankomatStatusOutput = new BankomatStatusOutput($this);
         $this->balance = $balance;
     }
     public function takeCard(Card $card): self
