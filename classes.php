@@ -25,7 +25,7 @@ class User
                 $bankomat->checkBalance();
                 break;
             case 2:
-                $bankomat->withdraw();
+                $bankomat->withdraw(readline());
                 break;
             case 3:
                 $bankomat->deposit(readline());
@@ -109,7 +109,7 @@ class BankomatStatusOutput
                 echo "Not enough money in bankomat for withdraw " . PHP_EOL;
                 break;
             case Bankomat::STEP_VALID_WITHDRAW:
-                echo "Take your money {$this->bankomat->withdraw()}" . PHP_EOL;
+                echo "Take your money " . PHP_EOL;
         }
     }
 }
@@ -157,8 +157,7 @@ class Bankomat
     public function checkBalance(): int
     {
         $this->changeStep(self::STEP_CHECK_BALANCE);
-        $balance = $this->card->getBalance();
-        return $balance;
+        return $this->card->getBalance();
     }
     public function withdraw($amount): void
     {
