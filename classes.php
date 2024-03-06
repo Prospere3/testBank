@@ -11,12 +11,14 @@ class User
     }
     public function insertCard(Bankomat $bankomat): void
     {
-
         $bankomat->takeCard($this->card);
     }
     public function enterPin(Bankomat $bankomat, int $pin): void
     {
-       $bankomat->takePin($pin);
+        $bankomat->takePin($pin);
+        if ($bankomat->getStep() !== Bankomat::STEP_VALID_PIN) {
+            $this->enterPin($bankomat, readline());
+        }
     }
     public function chooseOption(Bankomat $bankomat): void
     {
@@ -78,9 +80,10 @@ class BankomatStatusOutput
         switch ($step) {
             case Bankomat::STEP_AWAIT_ENTER_CARD:
                 echo "Insert card " . PHP_EOL;
+                sleep(1);
                 break;
             case Bankomat::STEP_AWAIT_ENTER_PIN:
-                echo "Enter your Pin-Code: " . PHP_EOL;
+                echo "Enter your Pin-Code " . PHP_EOL;
                 break;
             case Bankomat::STEP_VALID_PIN:
                 echo "1. Check Balance" . PHP_EOL;
@@ -95,7 +98,7 @@ class BankomatStatusOutput
                 echo "Your balance is: {$this->bankomat->card->getBalance()} " . PHP_EOL;
                 break;
             case Bankomat::STEP_WITHDRAW:
-                echo "Enter the amount you want to withdraw " . PHP_EOL;
+                echo "Enter the amount you want to withdraw: " . PHP_EOL;
                 break;
             case Bankomat::STEP_DEPOSIT:
                 echo "You can put your money " . PHP_EOL;
@@ -110,7 +113,11 @@ class BankomatStatusOutput
                 echo "Not enough money in bankomat for withdraw " . PHP_EOL;
                 break;
             case Bankomat::STEP_VALID_WITHDRAW:
-                echo "Take your money: " . PHP_EOL;
+                echo "Take your money " . PHP_EOL;
+                break;
+            case Bankomat::STEP_CARD_BLOCK:
+                echo "So many wrong pin-code. Your card is blocked " . PHP_EOL;
+                break;
         }
     }
 }
@@ -127,29 +134,49 @@ class Bankomat
     public const STEP_NOT_MONEY_ON_CARD = 9;
     public const STEP_NOT_MONEY_ON_BANKOMAT = 10;
     public const STEP_VALID_WITHDRAW = 11;
+    public const STEP_CARD_BLOCK = 12;
     private BankomatStatusOutput $bankomatStatusOutput;
     private int $step = self::STEP_AWAIT_ENTER_CARD;
     public ?Card $card = null;
     private int $balance;
+    private int $pinAttempts = 0;
+    private bool $cardBlocked = false;
     public function __construct(int $balance)
     {
 
         $this->bankomatStatusOutput = new BankomatStatusOutput($this);
         $this->balance = $balance;
+        if ($this->step == self::STEP_AWAIT_ENTER_CARD && $this->card === null) {
+            $this->changeStep(self::STEP_AWAIT_ENTER_CARD);
+        } else {
+            $this->changeStep(self::STEP_AWAIT_ENTER_PIN);
+        }
     }
     public function takeCard(Card $card): self
     {
         $this->card = $card;
+        $this->pinAttempts = 0;
         $this->changeStep(self::STEP_AWAIT_ENTER_PIN);
         return $this;
     }
-    public function checkValidPin($pin): static
+    public function checkValidPin($pin): void
     {
-        if($pin === $this->card->getPin())
-            $this->changeStep(self::STEP_VALID_PIN);
-        else
+        if($this->cardBlocked) {
+
             $this->changeStep(self::STEP_NOT_VALID_PIN);
-        return $this;
+        }
+
+        if($pin === $this->card->getPin()) {
+            $this->changeStep(self::STEP_VALID_PIN);
+            $this->pinAttempts = 0;
+        } else {
+            $this->pinAttempts++;
+             if($this->pinAttempts >= 3) {
+                 $this->cardBlocked();
+             } else {
+                 $this->changeStep(self::STEP_NOT_VALID_PIN);
+             }
+        }
     }
     public function changeStep(int $step): void
     {
@@ -171,11 +198,13 @@ class Bankomat
         elseif ($amount >$bankBalance)
             $this->changeStep(self::STEP_NOT_MONEY_ON_BANKOMAT);
         else
+            $this->changeStep(self::STEP_VALID_WITHDRAW);
             $newCardBalance = $cardBalance - $amount;
             $newBankBalance = $bankBalance - $amount;
             $this->card->setBalance($newCardBalance);
             $this->setBalance($newBankBalance);
-            $this->changeStep(self::STEP_VALID_WITHDRAW);
+            sleep(2);
+            $this->changeStep(self::STEP_VALID_PIN);
 
     }
     public function deposit(int $amount): void
@@ -187,6 +216,8 @@ class Bankomat
         $newBankBalance = $currentBankBalance + $amount;
         $this->card->setBalance($newCardBalance);
         $this->setBalance($newBankBalance);
+        sleep(2);
+        $this->changeStep(self::STEP_VALID_PIN);
     }
     public function getStep(): int
     {
@@ -203,6 +234,11 @@ class Bankomat
     public function setBalance(int $balance): void
     {
         $this->balance = $balance;
+    }
+    private function cardBlocked(): void
+    {
+        $this->changeStep(self::STEP_CARD_BLOCK);
+        exit();
     }
 }
 
